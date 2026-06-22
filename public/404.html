@@ -1,0 +1,22 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Maison Bahnel</title>
+  <script>
+    // Redirige toutes les URL 404 vers index.html (nécessaire pour les SPA sur GitHub Pages)
+    var path = window.location.pathname;
+    var search = window.location.search;
+    var hash = window.location.hash;
+    var base = path.split('/').slice(0, 2).join('/');
+    window.location.replace(
+      base + '/?p=' + encodeURIComponent(path.slice(base.length)) + search + hash
+    );
+  </script>
+</head>
+<body>
+  <p style="font-family:Georgia,serif;text-align:center;margin-top:4rem;color:#C6A55A;">
+    Maison Bahnel — Redirection en cours...
+  </p>
+</body>
+</html>
