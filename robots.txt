@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://zacksslecapitaine1-pixel.github.io/MAISON-BAHNEL/sitemap.xml
