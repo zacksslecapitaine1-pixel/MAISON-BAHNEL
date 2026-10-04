@@ -2,7 +2,7 @@ User-agent: *
 Allow: /
 
 # Sitemap
-Sitemap: https://maisonbahnel.com/sitemap.xml
+Sitemap: https://maison-bahnel.com/sitemap.xml
 
 # Bloque les ressources inutiles
 Disallow: /dist/

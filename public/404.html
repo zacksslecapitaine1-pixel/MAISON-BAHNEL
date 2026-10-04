@@ -4,14 +4,8 @@
   <meta charset="UTF-8">
   <title>Maison Bahnel</title>
   <script>
-    // Redirige toutes les URL 404 vers index.html (nécessaire pour les SPA sur GitHub Pages)
-    var path = window.location.pathname;
-    var search = window.location.search;
-    var hash = window.location.hash;
-    var base = path.split('/').slice(0, 2).join('/');
-    window.location.replace(
-      base + '/?p=' + encodeURIComponent(path.slice(base.length)) + search + hash
-    );
+    // Site mono-page servi à la racine du domaine : toute URL inconnue renvoie vers l'accueil.
+    window.location.replace('/' + window.location.search + window.location.hash);
   </script>
 </head>
 <body>

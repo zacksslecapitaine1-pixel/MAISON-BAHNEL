@@ -29,10 +29,10 @@ jobs:
       - name: Installation des dépendances
         run: npm install
 
-      - name: Build Vite (avec base GitHub Pages)
+      - name: Build Vite (domaine personnalisé, base = /)
         run: npm run build
         env:
-          VITE_BASE_URL: /${{ github.event.repository.name }}/
+          VITE_BASE_URL: /
 
       - name: Configuration GitHub Pages
         uses: actions/configure-pages@v4
