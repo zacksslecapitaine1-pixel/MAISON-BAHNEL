@@ -1,8 +1,7 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-// La variable VITE_BASE_URL est injectée automatiquement par GitHub Actions.
-// En local (npm run dev), la base est '/' par défaut.
+// VITE_BASE_URL est injectée par GitHub Actions ('/' pour le domaine personnalisé).
 export default defineConfig({
   plugins: [react()],
   base: process.env.VITE_BASE_URL || '/',
@@ -10,13 +9,6 @@ export default defineConfig({
     outDir: 'dist',
     sourcemap: false,
     assetsInlineLimit: 4096,
-    rollupOptions: {
-      output: {
-        manualChunks: {
-          three: ['three'],
-          react: ['react', 'react-dom']
-        }
-      }
-    }
+    rollupOptions: { output: { manualChunks: { react: ['react', 'react-dom'] } } }
   }
 })
