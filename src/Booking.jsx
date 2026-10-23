@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useMemo } from "react";
-import { CATS, SERVICE_BY_ID, servicesOf, TIMES, wa, money, PHONE, DEPOSIT_NOTE } from "./data.js";
+import { CATS, SERVICE_BY_ID, servicesOf, TIMES, wa, money, svcLabel, PHONE, DEPOSIT_NOTE } from "./data.js";
 import { clean, phoneOk } from "./utils.js";
 
 const pad = (n) => String(n).padStart(2, "0");
@@ -7,6 +7,7 @@ const keyOf = (d) => `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDat
 const DOW = ["dim", "lun", "mar", "mer", "jeu", "ven", "sam"];
 const MON = ["janv.", "févr.", "mars", "avr.", "mai", "juin", "juil.", "août", "sept.", "oct.", "nov.", "déc."];
 const STEPS = ["Soins", "Date", "Vos infos", "Confirmer"];
+const STEPS_WAIT = ["Soins", "Vos infos", "Confirmer"]; // réservation en attente (spa) : pas de date
 
 const roundTo500 = (n) => Math.round(n / 500) * 500;
 
@@ -47,7 +48,7 @@ export default function Booking({ open, preset, onClose }) {
     setSel(ids);
     setCat(ids.length ? SERVICE_BY_ID[ids[0]].cat : "massages");
     setAbo(false);
-    setStep(ids.length ? 2 : 1);
+    setStep(ids.length ? (SERVICE_BY_ID[ids[0]].pending ? 3 : 2) : 1);
     setDate(""); setTime(""); setName(""); setPhone(""); setNote("");
     setTouched(false); setDone(false); setCopied(false);
     document.body.classList.add("lock");
@@ -78,14 +79,22 @@ export default function Booking({ open, preset, onClose }) {
   useEffect(() => { if (bodyRef.current) bodyRef.current.scrollTop = 0; }, [step, done]);
 
   const items = sel.map((id) => SERVICE_BY_ID[id]).filter(Boolean);
+  const pending = items.some((i) => i.pending);
+  const stepList = pending ? STEPS_WAIT : STEPS;
+  const shown = pending ? { 1: 1, 3: 2, 4: 3 }[step] || 1 : step;
   const useAbo = abo && items.some((i) => i.abo);
-  const unit = (i) => (useAbo && i.abo ? i.abo : i.price);
+  const unit = (i) => (useAbo && i.abo ? i.abo : i.price || 0);
   const total = items.reduce((a, i) => a + unit(i), 0);
   const hasFrom = items.some((i) => i.from);
   const canAbo = items.some((i) => i.abo);
   const dMin = roundTo500(total * 0.3), dMax = roundTo500(total * 0.5);
 
-  const toggle = (id) => setSel((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
+  // La réservation en attente (spa) est exclusive : elle ne se combine pas avec un soin daté
+  const toggle = (id) => setSel((s) => {
+    if (s.includes(id)) return s.filter((x) => x !== id);
+    if (SERVICE_BY_ID[id].pending) return [id];
+    return [...s.filter((x) => !SERVICE_BY_ID[x].pending), id];
+  });
 
   const now = new Date();
   const todayKey = keyOf(now);
@@ -100,8 +109,14 @@ export default function Booking({ open, preset, onClose }) {
     : "";
 
   const nameClean = clean(name, 60), phoneClean = clean(phone, 25), noteClean = clean(note, 300);
-  const lines = items.map((i) => `• ${i.name}${i.dur ? " (" + i.dur + ")" : ""} — ${i.from ? "à partir de " : ""}${money(unit(i))}${useAbo && i.abo ? " (tarif abonnement 10 séances)" : ""}`);
-  const message = [
+  const lines = items.map((i) => `• ${svcLabel(i)}${i.dur ? " (" + i.dur + ")" : ""} — ${i.from ? "à partir de " : ""}${money(unit(i))}${useAbo && i.abo ? " (tarif abonnement 10 séances)" : ""}`);
+  const message = (pending ? [
+    "Bonjour Maison Bahnel,", "",
+    "Le spa n'est pas encore ouvert : je souhaite être placé(e) en réservation en attente et être prévenu(e) dès son ouverture.", "",
+    `Nom : ${nameClean}`, `Téléphone : ${phoneClean}`,
+    noteClean ? `Note : ${noteClean}` : null, "",
+    "Merci !",
+  ] : [
     "Bonjour Maison Bahnel,", "",
     "Je souhaite réserver :", ...lines, "",
     `Date : ${dateLabel}`, `Heure : ${time}`, "",
@@ -109,12 +124,12 @@ export default function Booking({ open, preset, onClose }) {
     `Total estimé : ${hasFrom ? "à partir de " : ""}${money(total)}`,
     noteClean ? `Note : ${noteClean}` : null, "",
     "Je réglerai l'acompte pour confirmer mon rendez-vous. Merci !",
-  ].filter((l) => l !== null).join("\n");
+  ]).filter((l) => l !== null).join("\n");
 
   const nameBad = touched && !nameClean;
   const phoneBad = touched && !phoneOk(phoneClean);
   const next = () => {
-    if (step === 1 && sel.length) setStep(2);
+    if (step === 1 && sel.length) setStep(pending ? 3 : 2);
     else if (step === 2 && date && time) setStep(3);
     else if (step === 3) {
       setTouched(true);
@@ -138,9 +153,9 @@ export default function Booking({ open, preset, onClose }) {
         </div>
         {!done && (
           <>
-            <div className="prog" aria-hidden="true"><i style={{ width: `${(step / 4) * 100}%` }} /></div>
-            <div className="sh-steps" aria-label={`Étape ${step} sur 4`}>
-              {STEPS.map((s, i) => <span key={s} className={step === i + 1 ? "ac" : step > i + 1 ? "dn" : ""}>{step > i + 1 ? "✓ " : ""}{s}</span>)}
+            <div className="prog" aria-hidden="true"><i style={{ width: `${(shown / stepList.length) * 100}%` }} /></div>
+            <div className="sh-steps" aria-label={`Étape ${shown} sur ${stepList.length}`}>
+              {stepList.map((s, i) => <span key={s} className={shown === i + 1 ? "ac" : shown > i + 1 ? "dn" : ""}>{shown > i + 1 ? "✓ " : ""}{s}</span>)}
             </div>
           </>
         )}
@@ -150,7 +165,7 @@ export default function Booking({ open, preset, onClose }) {
             <div className="done">
               <div className="mark" aria-hidden="true">✦</div>
               <h3>Merci {nameClean.split(" ")[0]} !</h3>
-              <p className="lead">WhatsApp s'est ouvert avec votre demande prête à envoyer. <strong>Appuyez sur « Envoyer »</strong> puis réglez l'acompte : votre créneau est confirmé dès sa réception.</p>
+              <p className="lead">WhatsApp s'est ouvert avec votre demande prête à envoyer. <strong>Appuyez sur « Envoyer »</strong>{pending ? " : nous vous préviendrons dès l'ouverture du spa." : " puis réglez l'acompte : votre créneau est confirmé dès sa réception."}</p>
               <p className="lead">Rien ne s'est ouvert ? Copiez le message, puis écrivez-nous au <strong>{PHONE}</strong>.</p>
               <a className="btn btn--gold" href={wa(message)} target="_blank" rel="noopener noreferrer">Rouvrir WhatsApp</a>
               <button className="btn btn--line" onClick={copy}>{copied ? "✓ Message copié" : "Copier le message"}</button>
@@ -170,8 +185,8 @@ export default function Booking({ open, preset, onClose }) {
                 {listed.map((s) => (
                   <button key={s.id} className="opt" aria-pressed={sel.includes(s.id)} onClick={() => toggle(s.id)}>
                     <span className="ck" aria-hidden="true">✓</span>
-                    <span className="nm">{s.name}<small>{[s.dur, s.abo ? "abonnement " + money(s.abo) : ""].filter(Boolean).join(" · ")}</small></span>
-                    <span className="pr">{s.from ? <small>dès</small> : null}{money(s.price)}</span>
+                    <span className="nm">{s.name}<small>{s.pending ? "Le spa est en finition : nous vous prévenons à l'ouverture" : [s.dur, s.abo ? "abonnement " + money(s.abo) : ""].filter(Boolean).join(" · ")}</small></span>
+                    <span className="pr">{s.pending ? <small>bientôt</small> : <>{s.from ? <small>dès</small> : null}{money(s.price)}</>}</span>
                   </button>
                 ))}
               </div>
@@ -227,21 +242,23 @@ export default function Booking({ open, preset, onClose }) {
               <h3>Tout est bon ?</h3>
               <p className="lead">Vérifiez votre demande avant l'envoi.</p>
               <div className="recap">
-                {items.map((i) => <div key={i.id}><span>{i.name}</span><span>{i.from ? "dès " : ""}{money(unit(i))}</span></div>)}
-                <div><span>Date</span><span>{dateLabel}</span></div>
-                <div><span>Heure</span><span>{time}</span></div>
+                {items.map((i) => <div key={i.id}><span>{svcLabel(i)}</span><span>{i.pending ? "en attente" : <>{i.from ? "dès " : ""}{money(unit(i))}</>}</span></div>)}
+                {!pending && <div><span>Date</span><span>{dateLabel}</span></div>}
+                {!pending && <div><span>Heure</span><span>{time}</span></div>}
                 <div><span>Nom</span><span>{nameClean}</span></div>
                 <div><span>Téléphone</span><span>{phoneClean}</span></div>
-                <div className="tot"><span>Total{hasFrom ? " estimé" : ""}</span><span>{hasFrom ? "dès " : ""}{money(total)}</span></div>
+                {!pending && <div className="tot"><span>Total{hasFrom ? " estimé" : ""}</span><span>{hasFrom ? "dès " : ""}{money(total)}</span></div>}
               </div>
-              <div className="note"><span className="ic" aria-hidden="true">✦</span><span>{DEPOSIT_NOTE} {useAbo ? "Le montant exact vous sera précisé sur WhatsApp." : <>Soit environ <b>{money(dMin)}</b> à <b>{money(dMax)}</b> pour votre sélection.</>}</span></div>
+              {pending
+                ? <div className="note"><span className="ic" aria-hidden="true">✦</span><span>Aucun paiement n'est demandé pour l'instant : les prestations et les tarifs du spa vous seront communiqués à l'ouverture.</span></div>
+                : <div className="note"><span className="ic" aria-hidden="true">✦</span><span>{DEPOSIT_NOTE} {useAbo ? "Le montant exact vous sera précisé sur WhatsApp." : <>Soit environ <b>{money(dMin)}</b> à <b>{money(dMax)}</b> pour votre sélection.</>}</span></div>}
             </>
           )}
         </div>
 
         {!done && (
           <div className="sh-foot">
-            {step <= 3 && items.length > 0 && (
+            {step <= 3 && items.length > 0 && !pending && (
               <>
                 {step === 1 && canAbo && (
                   <label className="aboT"><input type="checkbox" checked={abo} onChange={(e) => setAbo(e.target.checked)} /><span>Tarif abonnement 10 séances<small>Appliqué aux soins qui le proposent</small></span></label>
@@ -250,7 +267,7 @@ export default function Booking({ open, preset, onClose }) {
               </>
             )}
             <div className="sh-nav">
-              {step > 1 && <button className="btn btn--back" onClick={() => setStep(step - 1)}>← Retour</button>}
+              {step > 1 && <button className="btn btn--back" onClick={() => setStep(pending && step === 3 ? 1 : step - 1)}>← Retour</button>}
               {step < 4 ? (
                 <button className="btn btn--gold" disabled={!canNext} onClick={next}>{step === 3 ? "Vérifier" : "Continuer"} →</button>
               ) : (

@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef, useCallback, lazy, Suspense } from "react";
 import {
   CATS, SERVICES, SERVICE_BY_ID, servicesOf, minPrice, POPULAR, FORMATIONS, LIFTING,
-  IMG, unsplash, money, wa, PHONE, SOCIAL, HOURS, DEPOSIT_NOTE,
+  IMG, unsplash, isLocal, svcLabel, money, wa, PHONE, SOCIAL, HOURS, DEPOSIT_NOTE,
 } from "./data.js";
 import { clean, phoneOk } from "./utils.js";
 
@@ -23,9 +23,9 @@ const imgFallback = (e) => { e.currentTarget.style.visibility = "hidden"; };
 
 const Img = ({ id, alt, w = 800, sizes = "(max-width:700px) 100vw, 50vw", eager = false, className, ...rest }) => (
   <img
-    src={unsplash(id, w)}
-    srcSet={[400, 800, 1200, 1600].map((x) => `${unsplash(id, x)} ${x}w`).join(", ")}
-    sizes={sizes}
+    src={isLocal(id) ? id : unsplash(id, w)}
+    srcSet={isLocal(id) ? undefined : [400, 800, 1200, 1600].map((x) => `${unsplash(id, x)} ${x}w`).join(", ")}
+    sizes={isLocal(id) ? undefined : sizes}
     alt={alt}
     className={className}
     loading={eager ? "eager" : "lazy"}
@@ -50,8 +50,8 @@ const TITLES = {
   contact: "Contact & réservation — Maison Bahnel, Lomé",
 };
 const DESCS = {
-  accueil: "Maison Bahnel, sanctuaire de beauté et de bien-être à Lomé : massages, rituels, lifting coréen, soins du visage, épilation et onglerie. Réservez en ligne.",
-  services: "Tous les soins et tarifs de Maison Bahnel à Lomé : préludes hammam, rituels signatures, lifting coréen, massages, soins du visage, épilation, onglerie.",
+  accueil: "Maison Bahnel, sanctuaire de beauté et de bien-être à Lomé : massages, rituels, lifting coréen, soins du visage, épilation (cire et laser définitive) et onglerie. Réservez en ligne.",
+  services: "Tous les soins et tarifs de Maison Bahnel à Lomé : préludes hammam, rituels signatures, lifting coréen, massages, soins du visage, épilation à la cire et au laser définitive, onglerie.",
   academie: "Formations professionnelles en massage, esthétique et prothésie ongulaire à Lomé avec l'Académie Maison Bahnel.",
   univers: "L'histoire de la fondatrice et la vision holistique de Maison Bahnel, spa et institut de beauté à Lomé.",
   experience: "Senteurs, ambiance, accueil : découvrez l'expérience sensorielle Maison Bahnel à Lomé.",
@@ -208,7 +208,7 @@ function Home({ book }) {
                 <span className="cat-ic" aria-hidden="true">{c.icon}</span>
                 <h3>{c.title}</h3>
                 <p>{c.intro.split(". ")[0].replace(/\.$/, "")}.</p>
-                <span className="cat-from">À partir de {money(minPrice(c.id))}</span>
+                <span className="cat-from">{c.soon ? "Bientôt disponible" : `À partir de ${money(minPrice(c.id))}`}</span>
                 <span className="cat-go">Découvrir →</span>
               </a>
             ))}
@@ -286,17 +286,76 @@ function Lifting({ book }) {
   );
 }
 
-function PriceList({ cat, book }) {
+function PriceRows({ list, book }) {
   return (
     <ul className="plist rev">
-      {servicesOf(cat).map((s) => (
+      {list.map((s) => (
         <li key={s.id} className="row">
           <span className="row-name">{s.name}{s.detail && <small>{s.detail}</small>}</span>
           <span className="row-price">{s.from && <small>à partir de</small>}{money(s.price)}</span>
-          <button className="row-add" onClick={() => book([s.id])} aria-label={`Réserver : ${s.name}`}>+</button>
+          <button className="row-add" onClick={() => book([s.id])} aria-label={`Réserver : ${svcLabel(s)}`}>+</button>
         </li>
       ))}
     </ul>
+  );
+}
+
+function PriceList({ cat, book }) {
+  const list = servicesOf(cat);
+  const groups = [...new Set(list.map((s) => s.group).filter(Boolean))];
+  if (!groups.length) return <PriceRows list={list} book={book} />;
+  return groups.map((g) => (
+    <div key={g} className="pgroup">
+      <h3 className="pgroup-t rev">{g}</h3>
+      <PriceRows list={list.filter((s) => s.group === g)} book={book} />
+    </div>
+  ));
+}
+
+/* Spa : page « en finition » avec illustration animée */
+function SpaSoon({ book }) {
+  const petals = [0, 45, 90, 135, 180, 225, 270, 315];
+  return (
+    <div className="spa-soon">
+      <div className="spa-art rev" role="img" aria-label="Fleur de lotus dorée qui tourne doucement, symbole du futur spa">
+        <svg viewBox="0 0 320 320" aria-hidden="true">
+          <defs>
+            <radialGradient id="spaGlow" cx="50%" cy="50%" r="50%">
+              <stop offset="0%" stopColor="#EBD08F" stopOpacity=".55" />
+              <stop offset="100%" stopColor="#EBD08F" stopOpacity="0" />
+            </radialGradient>
+            <linearGradient id="spaPetal" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="#EBD08F" />
+              <stop offset="100%" stopColor="#C6A55A" />
+            </linearGradient>
+          </defs>
+          <circle cx="160" cy="160" r="150" fill="url(#spaGlow)" />
+          <g className="spa-ring spa-ring--out">
+            <circle cx="160" cy="160" r="142" fill="none" stroke="#C6A55A" strokeWidth="1" strokeDasharray="2 9" strokeLinecap="round" />
+          </g>
+          <g className="spa-rot spa-rot--slow">
+            {petals.map((a) => (
+              <path key={a} d="M160 160 C140 120 140 70 160 36 C180 70 180 120 160 160Z" transform={`rotate(${a} 160 160)`} fill="url(#spaPetal)" opacity=".38" stroke="#7A5A14" strokeWidth=".8" />
+            ))}
+          </g>
+          <g className="spa-rot spa-rot--fast">
+            {petals.map((a) => (
+              <path key={a} d="M160 160 C147 132 147 100 160 76 C173 100 173 132 160 160Z" transform={`rotate(${a + 22.5} 160 160)`} fill="url(#spaPetal)" opacity=".85" stroke="#7A5A14" strokeWidth=".8" />
+            ))}
+          </g>
+          <circle cx="160" cy="160" r="13" fill="#FDFBF7" stroke="#7A5A14" strokeWidth="1.5" />
+          <circle cx="160" cy="160" r="5" fill="#C6A55A" />
+        </svg>
+      </div>
+      <div className="spa-txt rev">
+        <p className="spa-badge">Construction terminée · Finitions en cours</p>
+        <h3>Un nouvel espace de détente se prépare</h3>
+        <p>Le spa Maison Bahnel est construit : il entre dans sa dernière phase, celle des finitions. Chaque détail est soigné pour que votre première visite soit à la hauteur de la maison.</p>
+        <p>Les prestations et les tarifs du spa seront communiqués très prochainement. En attendant, vous pouvez vous inscrire en réservation en attente : nous vous prévenons dès l'ouverture.</p>
+        <div className="spa-prog" aria-hidden="true"><i /></div>
+        <p style={{ marginTop: "1.4rem" }}><button className="btn btn--gold" onClick={() => book(["spa-attente"])}>Réservation en attente</button></p>
+      </div>
+    </div>
   );
 }
 
@@ -325,12 +384,21 @@ function Services({ sub, book }) {
       <section className="sec" id="svc-top" style={{ paddingTop: "2.6rem" }}>
         <div className="wrap">
           <div className="note" style={{ marginBottom: "2.2rem" }}><span className="ic" aria-hidden="true">✦</span><span><b>Acompte :</b> {DEPOSIT_NOTE}</span></div>
-          <div className="cat-head rev"><p className="eyebrow">{cat.tab}</p><h2>{cat.title}</h2><p>{cat.intro}</p></div>
+          {cat.id === "laser" ? (
+            <div className="cat-feature">
+              <div className="cat-head rev"><p className="eyebrow">{cat.tab}</p><h2>{cat.title}</h2><p>{cat.intro}</p></div>
+              <div className="cf-img rev"><Img id={IMG.laser} alt="Séance d'épilation au laser" w={800} /></div>
+            </div>
+          ) : (
+            <div className="cat-head rev"><p className="eyebrow">{cat.tab}</p><h2>{cat.title}</h2><p>{cat.intro}</p></div>
+          )}
           {cat.id === "lifting" ? <Lifting book={book} />
-            : (cat.id === "epilation" || cat.id === "onglerie") ? <PriceList cat={cat.id} book={book} />
+            : cat.id === "spa" ? <SpaSoon book={book} />
+            : (cat.id === "epilation" || cat.id === "onglerie" || cat.id === "laser") ? <PriceList cat={cat.id} book={book} />
             : <div className="cards">{servicesOf(cat.id).map((s) => <SvcCard key={s.id} s={s} book={book} />)}</div>}
+          {cat.id === "laser" ? <div className="note rev" style={{ marginTop: "1.6rem" }}><span className="ic" aria-hidden="true">✦</span><span>Le laser agit sur les poils en phase de croissance : plusieurs séances espacées sont nécessaires pour un résultat optimal. Tarifs indiqués par séance et par zone.</span></div> : null}
           {cat.id === "massages" || cat.id === "soins" ? <p className="rev" style={{ marginTop: "1.6rem", color: "var(--txm)" }}>L'abonnement de 10 séances vous fait bénéficier du tarif réduit à chaque séance.</p> : null}
-          <p className="center" style={{ marginTop: "2.6rem" }}><button className="btn btn--gold" onClick={() => book([])}>Prendre rendez-vous</button></p>
+          {cat.id !== "spa" && <p className="center" style={{ marginTop: "2.6rem" }}><button className="btn btn--gold" onClick={() => book([])}>Prendre rendez-vous</button></p>}
         </div>
       </section>
     </>
@@ -373,8 +441,11 @@ function Univers() {
       <PageHead img={IMG.founder} eye="Mon univers" sub="L'histoire d'une femme, d'un retour à soi, et d'une maison née de cette renaissance.">Un parcours <em>de vie</em></PageHead>
       <section className="sec sec--alt">
         <div className="wrap split" style={{ alignItems: "start" }}>
-          <div className="split-img rev">
-            <Img id={IMG.founder} alt="La fondatrice de Maison Bahnel" w={800} />
+          <div className="duo-wrap rev">
+            <div className="duo">
+              <Img id={IMG.fondatrice1} alt="La fondatrice de Maison Bahnel, souriante, en tenue wax" w={880} />
+              <Img id={IMG.fondatrice2} alt="La fondatrice de Maison Bahnel, en tenue blanche et chapeau" w={1086} />
+            </div>
             <figure className="quote"><p>« Ce qui n'était au départ qu'une manière de prendre soin de proches est devenu une évidence absolue. »</p><cite>La Fondatrice, Maison Bahnel</cite></figure>
           </div>
           <div>
@@ -427,7 +498,7 @@ function Contact({ book }) {
   const [fn, setFn] = useState(""), [fp, setFp] = useState(""), [fs, setFs] = useState(""), [fm, setFm] = useState(""), [touched, setTouched] = useState(false);
   const n = clean(fn, 60), p = clean(fp, 25), m = clean(fm, 500);
   const valid = !!n && phoneOk(p);
-  const svc = fs && SERVICE_BY_ID[fs] ? SERVICE_BY_ID[fs].name : "";
+  const svc = fs && SERVICE_BY_ID[fs] ? svcLabel(SERVICE_BY_ID[fs]) : "";
   const msg = `Bonjour Maison Bahnel,\n\nNom : ${n}\nTéléphone : ${p}${svc ? "\nSoin : " + svc : ""}${m ? "\n\nMessage : " + m : ""}\n\nMerci !`;
   return (
     <>
@@ -453,7 +524,7 @@ function Contact({ book }) {
             <div className="fld"><label htmlFor="ct-s">Soin souhaité</label>
               <select id="ct-s" value={fs} onChange={(e) => setFs(e.target.value)}>
                 <option value="">Je ne sais pas encore</option>
-                {CATS.map((c) => <optgroup key={c.id} label={c.tab}>{servicesOf(c.id).map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</optgroup>)}
+                {CATS.map((c) => <optgroup key={c.id} label={c.tab}>{servicesOf(c.id).map((s) => <option key={s.id} value={s.id}>{svcLabel(s)}</option>)}</optgroup>)}
               </select></div>
             <div className="fld"><label htmlFor="ct-m">Message</label><textarea id="ct-m" value={fm} maxLength={500} onChange={(e) => setFm(e.target.value)} placeholder="Votre question ou votre demande…" /></div>
             <a className="btn btn--gold" style={{ width: "100%" }} href={valid ? wa(msg) : "#/contact"} target={valid ? "_blank" : undefined} rel="noopener noreferrer"

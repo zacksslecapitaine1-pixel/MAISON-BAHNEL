@@ -34,7 +34,13 @@ export const IMG = {
   face: "photo-1487412947147-5cebf100ffc2",
   founder: "photo-1531746020798-e6953c6e8e04",
   acad: "photo-1581088669936-e20c38ff0c36",
+  // Photos propres à la maison (fichiers dans /public/img)
+  fondatrice1: "/img/fondatrice-1.jpg",
+  fondatrice2: "/img/fondatrice-2.jpg",
+  liftingFil: "/img/lifting-fil.jpg",
+  laser: "/img/laser-visage.jpg",
 };
+export const isLocal = (id) => typeof id === "string" && id.startsWith("/");
 export const unsplash = (id, w, q = 70) =>
   `https://images.unsplash.com/${id}?w=${w}&q=${q}&auto=format&fit=crop`;
 
@@ -62,7 +68,7 @@ export const CATS = [
     tab: "Lifting coréen",
     title: "Le Lifting Coréen",
     icon: "◇",
-    img: IMG.face,
+    img: IMG.liftingFil,
     intro:
       "Une technique anti-âge non invasive et sans douleur, réalisée avec des fils de soie et de collagène. Résultats instantanés.",
   },
@@ -84,11 +90,20 @@ export const CATS = [
   },
   {
     id: "epilation",
-    tab: "Épilation",
+    tab: "Épilation cire",
     title: "Épilation à la cire",
     icon: "◌",
     img: IMG.drain,
     intro: "Une épilation soignée, dans le respect de votre peau.",
+  },
+  {
+    id: "laser",
+    tab: "Laser définitif",
+    title: "Épilation au laser définitive",
+    icon: "✺",
+    img: IMG.laser,
+    intro:
+      "Dites adieu au rasoir et à la cire. Le laser agit à la racine du poil pour une épilation définitive : une peau lisse durablement, sans repousses répétées ni poils incarnés. Précis et rapide, il traite aussi bien les petites zones du visage que les grandes surfaces du corps.",
   },
   {
     id: "onglerie",
@@ -97,6 +112,16 @@ export const CATS = [
     icon: "◍",
     img: IMG.nails,
     intro: "Manucure, pédicure, poses et nail art : des mains et des pieds sublimés.",
+  },
+  {
+    id: "spa",
+    tab: "Spa · bientôt",
+    title: "Le Spa Maison Bahnel",
+    icon: "❀",
+    img: IMG.spa,
+    soon: true,
+    intro:
+      "Notre espace spa est en finition : la construction est terminée, il ne reste que les finitions. Les prestations et les tarifs seront dévoilés très prochainement.",
   },
 ];
 
@@ -143,12 +168,12 @@ export const SERVICES = [
 
   // 3. Lifting coréen
   {
-    id: "lifting-premium", cat: "lifting", name: "Le Lifting Coréen Premium", dur: "2 h", price: 60000, img: IMG.face,
+    id: "lifting-premium", cat: "lifting", name: "Le Lifting Coréen Premium", dur: "2 h", price: 60000, img: IMG.liftingFil,
     sub: "« Glass Skin & Lift » — séance unique.",
     desc: "Idéal pour un coup d'éclat spectaculaire avant un événement (mariage, soirée à Lomé).",
   },
   {
-    id: "lifting-cure", cat: "lifting", name: "La Cure « Jeunesse Éternelle »", dur: "3 séances", price: 165000, regular: 180000, img: IMG.face,
+    id: "lifting-cure", cat: "lifting", name: "La Cure « Jeunesse Éternelle »", dur: "3 séances", price: 165000, regular: 180000, img: IMG.liftingFil,
     sub: "Forfait 3 séances au lieu de 180 000 F CFA.",
     desc: "Le collagène et les fils agissent par accumulation. Pour un résultat durable (plusieurs mois), il faut rapprocher 3 séances à 10 ou 14 jours d'intervalle.",
     includes: [
@@ -244,7 +269,41 @@ export const SERVICES = [
     ["e-corps", "Corps entier", 50000, true],
   ].map(([id, name, price, from]) => ({ id, cat: "epilation", name, price, from: !!from, list: true })),
 
-  // 7. Onglerie
+  // 7. Épilation au laser définitive
+  ...[
+    ["Visage", [
+      ["l-intersourcils", "Inter-sourcils", 30000],
+      ["l-levres", "Lèvres supérieures", 30000],
+      ["l-menton", "Menton", 40000],
+      ["l-oreilles", "Oreilles", 30000],
+      ["l-nez", "Nez & narines", 30000],
+      ["l-tempes", "Tempes", 40000],
+      ["l-joues", "Joues", 60000],
+      ["l-barbe", "Barbe & bas du visage", 80000],
+      ["l-visage", "Visage entier", 100000],
+    ]],
+    ["Bras", [
+      ["l-aisselles", "Aisselles", 40000],
+      ["l-avantbras", "Avant-bras", 60000],
+      ["l-bras", "Bras", 80000],
+    ]],
+    ["Jambes", [
+      ["l-demijambes", "Demi-jambes", 70000],
+      ["l-jambes", "Jambes entières", 100000],
+    ]],
+    ["Corps", [
+      ["l-areoles", "Aréoles", 30000],
+      ["l-cou", "Cou", 50000],
+      ["l-ligne", "Ligne abdominale", 40000],
+      ["l-abdomen", "Abdomen / ventre", 60000],
+      ["l-torse", "Torse", 80000],
+      ["l-dos", "Dos", 90000],
+      ["l-maillot", "Maillot classique", 50000],
+      ["l-maillot-int", "Maillot intégral", 70000],
+    ]],
+  ].flatMap(([group, rows]) => rows.map(([id, name, price]) => ({ id, cat: "laser", group, name, price, list: true }))),
+
+  // 8. Onglerie
   ...[
     ["o-pedicure", "Pédicure", 10000, false, "Désinfection, bain de pieds, callosités à la pierre ponce, gommage, cuticules, hydratation, massage"],
     ["o-jelly", "Jelly pédicure", 12000],
@@ -261,11 +320,21 @@ export const SERVICES = [
     ["o-depose-gel", "Dépose acrylique / gel", 5000],
     ["o-depose-semi", "Dépose vernis semi-permanent", 3000],
   ].map(([id, name, price, from, detail]) => ({ id, cat: "onglerie", name, price, from: !!from, detail, list: true })),
+  // 9. Spa — en finition : réservation en attente
+  {
+    id: "spa-attente", cat: "spa", name: "Réservation en attente — ouverture du Spa", pending: true, list: true,
+    desc: "Laissez-nous vos coordonnées : nous vous prévenons dès l'ouverture du spa et de ses tarifs.",
+  },
 ];
 
 export const SERVICE_BY_ID = Object.fromEntries(SERVICES.map((s) => [s.id, s]));
 export const servicesOf = (cat) => SERVICES.filter((s) => s.cat === cat);
-export const minPrice = (cat) => Math.min(...servicesOf(cat).map((s) => s.price));
+export const minPrice = (cat) => {
+  const p = servicesOf(cat).map((s) => s.price).filter((n) => typeof n === "number");
+  return p.length ? Math.min(...p) : null;
+};
+// Libellé complet (évite les doublons entre cire et laser dans la réservation)
+export const svcLabel = (s) => (s.cat === "laser" ? `Laser · ${s.name}` : s.name);
 
 // ───────────── Lifting coréen : explications ─────────────
 export const LIFTING = {
